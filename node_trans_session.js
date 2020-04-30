@@ -10,6 +10,7 @@ const { spawn } = require('child_process');
 const dateFormat = require('dateformat');
 const mkdirp = require('mkdirp');
 const fs = require('fs');
+const _ = require('lodash');
 
 class NodeTransSession extends EventEmitter {
   constructor(conf) {
@@ -43,7 +44,7 @@ class NodeTransSession extends EventEmitter {
     if (this.conf.hls) {
       this.conf.hlsFlags = this.conf.hlsFlags ? this.conf.hlsFlags : '';
       let hlsFileName = 'index.m3u8';
-      let mapHls = `${this.conf.hlsFlags}${ouPath}/${hlsFileName}|`;
+      let mapHls = `${this.conf.hlsFlags}${ouPath}/${hlsFileName}${this.conf.raw ? '' : '|'}`;
       mapStr += mapHls;
       Logger.log('[Transmuxing HLS] ' + this.conf.streamPath + ' to ' + ouPath + '/' + hlsFileName);
     }
@@ -56,13 +57,22 @@ class NodeTransSession extends EventEmitter {
     }
     mkdirp.sync(ouPath);
     let argv = ['-y', '-fflags', 'nobuffer', '-i', inPath];
-    Array.prototype.push.apply(argv, ['-c:v', vc]);
-    Array.prototype.push.apply(argv, this.conf.vcParam);
-    Array.prototype.push.apply(argv, ['-c:a', ac]);
-    Array.prototype.push.apply(argv, this.conf.acParam);
-    Array.prototype.push.apply(argv, ['-f', 'tee', '-map', '0:a?', '-map', '0:v?', mapStr]);
+    if (this.conf.raw) {
+      Array.prototype.push.apply(argv, _.map(this.conf.raw, (item) => {
+        const compiled = _.template(item);
+        return compiled(this.conf);
+      }));
+      Array.prototype.push.apply(argv, [mapStr]);
+    } else {
+      Array.prototype.push.apply(argv, ['-c:v', vc]);
+      Array.prototype.push.apply(argv, this.conf.vcParam);
+      Array.prototype.push.apply(argv, ['-c:a', ac]);
+      Array.prototype.push.apply(argv, this.conf.acParam);
+      Array.prototype.push.apply(argv, ['-f', 'tee', '-map', '0:a?', '-map', '0:v?', mapStr]);
+    }
     argv = argv.filter((n) => { return n }); //去空
     this.ffmpeg_exec = spawn(this.conf.ffmpeg, argv);
+    console.log(`${this.conf.ffmpeg} ${argv.join(' ')}`);
     this.ffmpeg_exec.on('error', (e) => {
       Logger.ffdebug(e);
     });

@@ -149,6 +149,9 @@ class NodeRelayServer {
   }
 
   onPostPublish(id, streamPath, args) {
+    // TODO 
+    // At this point we could also push to social destinations...
+    // Besides pushing to the HLS trans configs...
     if (!this.config.relay.tasks) {
       return;
     }
