@@ -8,6 +8,7 @@ const NodeCoreUtils = require("./node_core_utils");
 
 const EventEmitter = require('events');
 const { spawn } = require('child_process');
+const _ = require('lodash');
 
 const RTSP_TRANSPORT = ['udp', 'tcp', 'udp_multicast', 'http'];
 
@@ -21,7 +22,9 @@ class NodeRelaySession extends EventEmitter {
 
   run() {
     let format = this.conf.ouPath.startsWith('rtsp://') ? 'rtsp' : 'flv';
-    let argv = ['-fflags', 'nobuffer', '-i', this.conf.inPath, '-c', 'copy', '-f', format, this.conf.ouPath];
+    let argv = this.conf.raw ? 
+      _.union(['-fflags', 'nobuffer', '-i', this.conf.inPath], this.conf.raw, [this.conf.ouPath]) :
+      ['-fflags', 'nobuffer', '-i', this.conf.inPath, '-c', 'copy', '-f', format, this.conf.ouPath];
     if (this.conf.inPath[0] === '/' || this.conf.inPath[1] === ':') {
       argv.unshift('-1');
       argv.unshift('-stream_loop');

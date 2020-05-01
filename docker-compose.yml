@@ -1,0 +1,12 @@
+version: '2'
+services:
+  media-server:
+    build:
+      context: .
+    volumes:
+      - ./media:/usr/src/app/media
+    ports:
+      - 8000:8000
+      - 1935:1935
+    environment:
+      FFMPEG_PATH: /usr/bin/ffmpeg

@@ -2,6 +2,7 @@ const NodeMediaServer = require('./');
 const createPlaylist = require('./create-playlist')
 const deletePlaylist = require('./delete-playlist')
 const _ = require('lodash');
+const NodeRelaySession = require('./node_relay_session');
 
 const config = {
   logType: 4,
@@ -33,7 +34,7 @@ const config = {
     secret: 'nodemedia2017privatekey'
   },
   relay: {
-    ffmpeg: '/usr/local/bin/ffmpeg',
+    ffmpeg: process.env.FFMPEG_PATH || '/usr/local/bin/ffmpeg',
     tasks: [
       {
         app: 'stream',
@@ -53,7 +54,7 @@ const config = {
     ],
   },
   trans: {
-    ffmpeg: '/usr/local/bin/ffmpeg',
+    ffmpeg: process.env.FFMPEG_PATH || '/usr/local/bin/ffmpeg',
     tasks: [
       {
         app: 'hls_360p',
@@ -194,6 +195,7 @@ const config = {
   },
 };
 
+this.dynamicSessions = new Map();
 
 let nms = new NodeMediaServer(config)
 nms.run();
@@ -227,6 +229,62 @@ nms.on('postPublish', async (id, StreamPath, args) => {
     } catch (err) {
       console.log(err);
     }
+  } else if (StreamPath.indexOf('/stream/') != -1) {
+    // Relay to youtube, facebook, twitch ???
+    let session;
+    if (args.youtube) {
+      session = new NodeRelaySession({
+        ffmpeg: config.relay.ffmpeg,
+        inPath: `rtmp://127.0.0.1:${config.rtmp.port}${StreamPath}`,
+        ouPath: `rtmp://a.rtmp.youtube.com/live2/${args.youtube}`
+      });
+      session.id = `youtube-${id}`;
+    }
+    if (args.facebook) {
+      session = new NodeRelaySession({
+        ffmpeg: config.relay.ffmpeg,
+        inPath: `rtmp://127.0.0.1:${config.rtmp.port}${StreamPath}`,
+        ouPath: `rtmp://a.rtmp.youtube.com/live2/${args.facebook}`
+      });
+      session.id = `facebook-${id}`;
+    }
+    if (args.twitch) {
+      session = new NodeRelaySession({
+        ffmpeg: config.relay.ffmpeg,
+        inPath: `rtmp://127.0.0.1:${config.rtmp.port}${StreamPath}`,
+        ouPath: `rtmp://live-jfk.twitch.tv/app/${args.twitch}`,
+        raw: [
+          '-c:v',
+          'libx264',
+          '-preset',
+          'veryfast',
+          '-c:a',
+          'copy',
+          '-b:v',
+          '3500k',
+          '-maxrate',
+          '3750k',
+          '-bufsize',
+          '4200k',
+          '-s',
+          '1280x720',
+          '-r',
+          '30',
+          '-f',
+          'flv',
+          '-max_muxing_queue_size',
+          '1024',
+        ]
+      });
+      session.id = `twitch-${id}`;
+    }
+    if (session) {
+      session.on('end', (id) => {
+        this.dynamicSessions.delete(id);
+      });
+      this.dynamicSessions.set(session.id, session);
+      session.run();
+    }
   }
 });
 
@@ -238,6 +296,25 @@ nms.on('donePublish', async (id, StreamPath, args) => {
       await deletePlaylist(config.http.mediaroot, name)
     } catch (err) {
       console.log(err);
+    }
+  } else if (StreamPath.indexOf('/stream/') != -1) {
+    if (args.youtube) {
+      let session = this.dynamicSessions.get(`youtube-${id}`);
+      if (session) {
+        session.end();
+      }
+    }
+    if (args.facebook) {
+      let session = this.dynamicSessions.get(`facebook-${id}`);
+      if (session) {
+        session.end();
+      }
+    }
+    if (args.twitch) {
+      let session = this.dynamicSessions.get(`twitch-${id}`);
+      if (session) {
+        session.end();
+      }
     }
   }
 });
