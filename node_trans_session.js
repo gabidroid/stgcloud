@@ -23,6 +23,10 @@ class NodeTransSession extends EventEmitter {
     let ac = this.conf.ac || 'copy';
     let inPath = 'rtmp://127.0.0.1:' + this.conf.rtmpPort + this.conf.streamPath;
     let ouPath = `${this.conf.mediaroot}/${this.conf.streamApp}/${this.conf.streamName}`;
+    if (this.conf.ouPath) {
+      const compiled = _.template(this.conf.ouPath);
+      ouPath = compiled(this.conf);
+    }
     let mapStr = '';
 
     if (this.conf.rtmp && this.conf.rtmpApp) {
@@ -88,6 +92,7 @@ class NodeTransSession extends EventEmitter {
     this.ffmpeg_exec.on('close', (code) => {
       Logger.log('[Transmuxing end] ' + this.conf.streamPath);
       this.emit('end');
+      // TODO delay this until all segments have been copied to S3
       fs.readdir(ouPath, function (err, files) {
         if (!err) {
           files.forEach((filename) => {

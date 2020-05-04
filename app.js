@@ -1,6 +1,7 @@
 const NodeMediaServer = require('./');
-const createPlaylist = require('./create-playlist')
-const deletePlaylist = require('./delete-playlist')
+const createPlaylist = require('./lib/create-playlist')
+const deletePlaylist = require('./lib/delete-playlist')
+const hls = require('./lib/hls')
 const _ = require('lodash');
 const NodeRelaySession = require('./node_relay_session');
 
@@ -15,7 +16,7 @@ const config = {
   },
   http: {
     port: 8000,
-    mediaroot: './media',
+    mediaroot: process.env.MEDIA_ROOT,
     webroot: './www',
     allow_origin: '*',
     api: true
@@ -39,17 +40,17 @@ const config = {
       {
         app: 'stream',
         mode: 'push',
-        edge: 'rtmp://127.0.0.1/hls_360p',
+        edge: 'rtmp://127.0.0.1/360p',
       },
       {
         app: 'stream',
         mode: 'push',
-        edge: 'rtmp://127.0.0.1/hls_480p',
+        edge: 'rtmp://127.0.0.1/480p',
       },
       {
         app: 'stream',
         mode: 'push',
-        edge: 'rtmp://127.0.0.1/hls_720p',
+        edge: 'rtmp://127.0.0.1/720p',
       },
     ],
   },
@@ -57,7 +58,7 @@ const config = {
     ffmpeg: process.env.FFMPEG_PATH || '/usr/local/bin/ffmpeg',
     tasks: [
       {
-        app: 'hls_360p',
+        app: '360p',
         hls: true,
         raw: [
           '-c:v',
@@ -87,7 +88,7 @@ const config = {
           '-flags',
           '-global_header',
           '-hls_time',
-          '4',
+          '6',
           '-hls_list_size',
           '6',
           '-hls_flags',
@@ -97,12 +98,13 @@ const config = {
           '-strftime',
           '1',
           '-hls_segment_filename',
-          '${mediaroot}/${streamApp}/${streamName}/%Y%m%d-%s.ts'
+          '${mediaroot}/${streamName}/${streamApp}/%Y%m%d-%s.ts'
         ],
+        ouPath: '${mediaroot}/${streamName}/${streamApp}',
         hlsFlags: '',
       },
       {
-        app: 'hls_480p',
+        app: '480p',
         hls: true,
         raw: [
           '-c:v',
@@ -132,7 +134,7 @@ const config = {
           '-flags',
           '-global_header',
           '-hls_time',
-          '4',
+          '6',
           '-hls_list_size',
           '6',
           '-hls_flags',
@@ -142,12 +144,13 @@ const config = {
           '-strftime',
           '1',
           '-hls_segment_filename',
-          '${mediaroot}/${streamApp}/${streamName}/%Y%m%d-%s.ts'
+          '${mediaroot}/${streamName}/${streamApp}/%Y%m%d-%s.ts'
         ],
+        ouPath: '${mediaroot}/${streamName}/${streamApp}',
         hlsFlags: '',
       },
       {
-        app: 'hls_720p',
+        app: '720p',
         hls: true,
         raw: [
           '-c:v',
@@ -177,7 +180,7 @@ const config = {
           '-flags',
           '-global_header',
           '-hls_time',
-          '4',
+          '6',
           '-hls_list_size',
           '6',
           '-hls_flags',
@@ -187,8 +190,9 @@ const config = {
           '-strftime',
           '1',
           '-hls_segment_filename',
-          '${mediaroot}/${streamApp}/${streamName}/%Y%m%d-%s.ts'
+          '${mediaroot}/${streamName}/${streamApp}/%Y%m%d-%s.ts'
         ],
+        ouPath: '${mediaroot}/${streamName}/${streamApp}',
         hlsFlags: '',
       },
     ]
@@ -199,6 +203,7 @@ this.dynamicSessions = new Map();
 
 let nms = new NodeMediaServer(config)
 nms.run();
+hls();
 
 nms.on('preConnect', (id, args) => {
   console.log('[NodeEvent on preConnect]', `id=${id} args=${JSON.stringify(args)}`);
@@ -222,7 +227,7 @@ nms.on('prePublish', (id, StreamPath, args) => {
 
 nms.on('postPublish', async (id, StreamPath, args) => {
   console.log('[NodeEvent on postPublish]', `id=${id} StreamPath=${StreamPath} args=${JSON.stringify(args)}`);
-  if (StreamPath.indexOf('hls_') != -1) {
+  if (StreamPath.indexOf('/720p/') != -1) {
     const name = StreamPath.split('/').pop()
     try {
       await createPlaylist(config.http.mediaroot, name)
@@ -244,7 +249,7 @@ nms.on('postPublish', async (id, StreamPath, args) => {
       session = new NodeRelaySession({
         ffmpeg: config.relay.ffmpeg,
         inPath: `rtmp://127.0.0.1:${config.rtmp.port}${StreamPath}`,
-        ouPath: `rtmp://a.rtmp.youtube.com/live2/${args.facebook}`
+        ouPath: `rtmps://live-api-s.facebook.com:443/rtmp/10158482968282472?s_bl=1&s_sc=10158482968372472&s_sw=0&s_vt=api-s&a=Aby2Jxt4w8-dLrBT`
       });
       session.id = `facebook-${id}`;
     }
@@ -290,7 +295,7 @@ nms.on('postPublish', async (id, StreamPath, args) => {
 
 nms.on('donePublish', async (id, StreamPath, args) => {
   console.log('[NodeEvent on donePublish]', `id=${id} StreamPath=${StreamPath} args=${JSON.stringify(args)}`);
-  if (StreamPath.indexOf('hls_') != -1) {
+  if (StreamPath.indexOf('/720p/') != -1) {
     const name = StreamPath.split('/').pop()
     try {
       await deletePlaylist(config.http.mediaroot, name)
