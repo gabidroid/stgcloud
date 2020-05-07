@@ -101,6 +101,8 @@ RUN apk add --no-cache --virtual .build-deps-yarn curl gnupg tar \
 #
 # App setup
 #
+RUN apk add --no-cache supervisor
+
 WORKDIR /usr/src/app
 
 COPY package*.json ./
@@ -113,5 +115,11 @@ EXPOSE 1935 8000
 
 RUN which ffmpeg
 
+# Add supervisord config
+RUN mkdir /var/logs
+RUN touch /var/logs/supervisord.log
+RUN chmod a+rw /var/logs/supervisord.log
+ADD supervisord.conf /etc/supervisord.conf
+
 ENTRYPOINT  []
-CMD ["node","app.js"]
+CMD ["supervisord", "--nodaemon", "-c", "/etc/supervisord.conf"]

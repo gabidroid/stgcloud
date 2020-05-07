@@ -241,7 +241,7 @@ nms.on('postPublish', async (id, StreamPath, args) => {
       session = new NodeRelaySession({
         ffmpeg: config.relay.ffmpeg,
         inPath: `rtmp://127.0.0.1:${config.rtmp.port}${StreamPath}`,
-        ouPath: `rtmp://a.rtmp.youtube.com/live2/${args.youtube}`
+        ouPath: `rtmp://a.rtmp.youtube.com/live2/${decodeURI(args.youtube)}`
       });
       session.id = `youtube-${id}`;
     }
@@ -249,7 +249,7 @@ nms.on('postPublish', async (id, StreamPath, args) => {
       session = new NodeRelaySession({
         ffmpeg: config.relay.ffmpeg,
         inPath: `rtmp://127.0.0.1:${config.rtmp.port}${StreamPath}`,
-        ouPath: `rtmps://live-api-s.facebook.com:443/rtmp/10158482968282472?s_bl=1&s_sc=10158482968372472&s_sw=0&s_vt=api-s&a=Aby2Jxt4w8-dLrBT`
+        ouPath: `rtmps://live-api-s.facebook.com:443/rtmp/${decodeURI(args.facebook)}`
       });
       session.id = `facebook-${id}`;
     }
@@ -257,7 +257,7 @@ nms.on('postPublish', async (id, StreamPath, args) => {
       session = new NodeRelaySession({
         ffmpeg: config.relay.ffmpeg,
         inPath: `rtmp://127.0.0.1:${config.rtmp.port}${StreamPath}`,
-        ouPath: `rtmp://live-jfk.twitch.tv/app/${args.twitch}`,
+        ouPath: `rtmp://live-jfk.twitch.tv/app/${decodeURI(args.twitch)}`,
         raw: [
           '-c:v',
           'libx264',
