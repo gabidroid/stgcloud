@@ -10,6 +10,7 @@ const NodeRtmpServer = require('./node_rtmp_server');
 const NodeHttpServer = require('./node_http_server');
 const NodeTransServer = require('./node_trans_server');
 const NodeRelayServer = require('./node_relay_server');
+const NodeRelaySession = require('./node_relay_session');
 const context = require('./node_core_ctx');
 const Package = require("./package.json");
 
@@ -92,6 +93,10 @@ class NodeMediaServer {
 
   getSession(id) {
     return context.sessions.get(id);
+  }
+
+  nodeRelaySession(config) {
+    return new NodeRelaySession(config);
   }
 }
 
