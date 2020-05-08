@@ -698,11 +698,3 @@ http://www.nodemedia.cn/products/node-media-client/win
 # Thanks
 strive, 树根, 疯狂的台灯, 枫叶, lzq, 番茄, smicroz , 熊科辉, Ken Lee , Erik Herz, Javier Gomez, trustfarm, leeoxiang, Aaron Turner， Anonymous  
 Thank you for your support.
-
-# Randy
-ffmpeg -stream_loop -1 -re -i ~/Downloads/test-video.mp4 -c copy -f flv "rtmp://localhost:1935/stream/test2"
-
-
-?youtube=kha8-4eh1-gm06-2qfs"
-?twitch=live_434627334_3cTuBtuzRYf2bKcDiJaAzXloBwL9qw
-?facebook=10158482968282472?s_bl=1&s_sc=10158482968372472&s_sw=0&s_vt=api-s&a=Aby2Jxt4w8-dLrBT
