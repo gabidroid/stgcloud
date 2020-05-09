@@ -76,7 +76,6 @@ class NodeTransSession extends EventEmitter {
     }
     argv = argv.filter((n) => { return n }); //去空
     this.ffmpeg_exec = spawn(this.conf.ffmpeg, argv);
-    console.log(`${this.conf.ffmpeg} ${argv.join(' ')}`);
     this.ffmpeg_exec.on('error', (e) => {
       Logger.ffdebug(e);
     });
@@ -92,20 +91,21 @@ class NodeTransSession extends EventEmitter {
     this.ffmpeg_exec.on('close', (code) => {
       Logger.log('[Transmuxing end] ' + this.conf.streamPath);
       this.emit('end');
-      // TODO delay this until all segments have been copied to S3
-      fs.readdir(ouPath, function (err, files) {
-        if (!err) {
-          files.forEach((filename) => {
-            if (filename.endsWith('.ts')
-              || filename.endsWith('.m3u8')
-              || filename.endsWith('.mpd')
-              || filename.endsWith('.m4s')
-              || filename.endsWith('.tmp')) {
-              fs.unlinkSync(ouPath + '/' + filename);
-            }
-          })
-        }
-      });
+      if (_.isNil(this.conf.cleanup) || this.conf.cleanup) {
+        fs.readdir(ouPath, function (err, files) {
+          if (!err) {
+            files.forEach((filename) => {
+              if (filename.endsWith('.ts')
+                || filename.endsWith('.m3u8')
+                || filename.endsWith('.mpd')
+                || filename.endsWith('.m4s')
+                || filename.endsWith('.tmp')) {
+                fs.unlinkSync(ouPath + '/' + filename);
+              }
+            })
+          }
+        });
+      }
     });
   }
 

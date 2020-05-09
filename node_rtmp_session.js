@@ -1021,6 +1021,15 @@ class NodeRtmpSession {
       }
     }
 
+    if (this.config.auth && this.config.auth.publishAuthorizer) {
+      let results = this.config.auth.publishAuthorizer(this.id, this.publishStreamPath, this.publishStreamId);
+      if (!results) {
+        Logger.log(`[rtmp publish] Unauthorized. id=${this.id} streamPath=${this.publishStreamPath} streamId=${this.publishStreamId} `);
+        this.sendStatusMessage(this.publishStreamId, "error", "NetStream.publish.Unauthorized", "Authorization required.");
+        return;
+      }
+    }
+
     if (context.publishers.has(this.publishStreamPath)) {
       Logger.log(`[rtmp publish] Already has a stream. id=${this.id} streamPath=${this.publishStreamPath} streamId=${this.publishStreamId}`);
       this.sendStatusMessage(this.publishStreamId, "error", "NetStream.Publish.BadName", "Stream already publishing");
@@ -1061,6 +1070,15 @@ class NodeRtmpSession {
       let results = NodeCoreUtils.verifyAuth(this.playArgs.sign, this.playStreamPath, this.config.auth.secret);
       if (!results) {
         Logger.log(`[rtmp play] Unauthorized. id=${this.id} streamPath=${this.playStreamPath}  streamId=${this.playStreamId} sign=${this.playArgs.sign}`);
+        this.sendStatusMessage(this.playStreamId, "error", "NetStream.play.Unauthorized", "Authorization required.");
+        return;
+      }
+    }
+
+    if (this.config.auth && this.config.auth.playAuthorizer) {
+      let results = this.config.auth.playAuthorizer(this.id, this.playStreamPath, this.playStreamId);
+      if (!results) {
+        Logger.log(`[rtmp play] Unauthorized. id=${this.id} streamPath=${this.playStreamPath} streamId=${this.publishStreamId} `);
         this.sendStatusMessage(this.playStreamId, "error", "NetStream.play.Unauthorized", "Authorization required.");
         return;
       }
