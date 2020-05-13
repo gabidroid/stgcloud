@@ -23,9 +23,21 @@ class NodeTransSession extends EventEmitter {
     let ac = this.conf.ac || 'copy';
     let inPath = 'rtmp://127.0.0.1:' + this.conf.rtmpPort + this.conf.streamPath;
     let ouPath = `${this.conf.mediaroot}/${this.conf.streamApp}/${this.conf.streamName}`;
+    const timeInMilliseconds = (new Date()).getTime();
     if (this.conf.ouPath) {
       const compiled = _.template(this.conf.ouPath);
-      ouPath = compiled(this.conf);
+      ouPath = compiled(_.assign({}, this.conf, {
+        timeInMilliseconds
+      }));
+    }
+    let ouPaths;
+    if (this.conf.ouPaths) {
+      ouPaths = _.map(this.conf.ouPaths, (ouPath) => {
+        const compiled = _.template(ouPath);
+        return compiled(_.assign({}, this.conf, {
+          timeInMilliseconds
+        }));
+      });
     }
     let mapStr = '';
 
@@ -46,11 +58,15 @@ class NodeTransSession extends EventEmitter {
       Logger.log('[Transmuxing MP4] ' + this.conf.streamPath + ' to ' + ouPath + '/' + mp4FileName);
     }
     if (this.conf.hls) {
-      this.conf.hlsFlags = this.conf.hlsFlags ? this.conf.hlsFlags : '';
-      let hlsFileName = 'index.m3u8';
-      let mapHls = `${this.conf.hlsFlags}${ouPath}/${hlsFileName}${this.conf.raw ? '' : '|'}`;
-      mapStr += mapHls;
-      Logger.log('[Transmuxing HLS] ' + this.conf.streamPath + ' to ' + ouPath + '/' + hlsFileName);
+      if (_.isNil(ouPaths) || _.isEmpty(ouPaths)) {
+        this.conf.hlsFlags = this.conf.hlsFlags ? this.conf.hlsFlags : '';
+        let hlsFileName = 'index.m3u8';
+        let mapHls = `${this.conf.hlsFlags}${ouPath}/${hlsFileName}${this.conf.raw ? '' : '|'}`;
+        mapStr += mapHls;
+        Logger.log('[Transmuxing HLS] ' + this.conf.streamPath + ' to ' + ouPath + '/' + hlsFileName);
+      } else {
+        Logger.log('[Transmuxing HLS] ' + this.conf.streamPath + ' to ' + JSON.stringify(ouPaths));
+      }
     }
     if (this.conf.dash) {
       this.conf.dashFlags = this.conf.dashFlags ? this.conf.dashFlags : '';
@@ -59,12 +75,20 @@ class NodeTransSession extends EventEmitter {
       mapStr += mapDash;
       Logger.log('[Transmuxing DASH] ' + this.conf.streamPath + ' to ' + ouPath + '/' + dashFileName);
     }
-    mkdirp.sync(ouPath);
+    if (!_.isNil(ouPaths) && !_.isEmpty(ouPaths)) {
+      _.forEach(ouPaths, (ouPath) => {
+        mkdirp.sync(ouPath);
+      });
+    } else {
+      mkdirp.sync(ouPath);
+    }
     let argv = ['-y', '-fflags', 'nobuffer', '-i', inPath];
     if (this.conf.raw) {
       Array.prototype.push.apply(argv, _.map(this.conf.raw, (item) => {
         const compiled = _.template(item);
-        return compiled(this.conf);
+        return compiled(_.assign({}, this.conf, {
+          timeInMilliseconds
+        }));
       }));
       Array.prototype.push.apply(argv, [mapStr]);
     } else {
@@ -75,6 +99,7 @@ class NodeTransSession extends EventEmitter {
       Array.prototype.push.apply(argv, ['-f', 'tee', '-map', '0:a?', '-map', '0:v?', mapStr]);
     }
     argv = argv.filter((n) => { return n }); //去空
+    Logger.ffdebug(`${this.conf.ffmpeg} ${_.join(argv, ' ')}`);
     this.ffmpeg_exec = spawn(this.conf.ffmpeg, argv);
     this.ffmpeg_exec.on('error', (e) => {
       Logger.ffdebug(e);
