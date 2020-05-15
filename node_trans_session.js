@@ -16,7 +16,7 @@ class NodeTransSession extends EventEmitter {
   constructor(conf) {
     super();
     this.conf = _.assign({}, conf, {
-      timeInMilliseconds
+      timeInMilliseconds: (new Date()).getTime()
     });
   }
 
