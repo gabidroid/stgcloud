@@ -15,7 +15,9 @@ const _ = require('lodash');
 class NodeTransSession extends EventEmitter {
   constructor(conf) {
     super();
-    this.conf = conf;
+    this.conf = _.assign({}, conf, {
+      timeInMilliseconds
+    });
   }
 
   run() {
@@ -23,20 +25,15 @@ class NodeTransSession extends EventEmitter {
     let ac = this.conf.ac || 'copy';
     let inPath = 'rtmp://127.0.0.1:' + this.conf.rtmpPort + this.conf.streamPath;
     let ouPath = `${this.conf.mediaroot}/${this.conf.streamApp}/${this.conf.streamName}`;
-    const timeInMilliseconds = (new Date()).getTime();
     if (this.conf.ouPath) {
       const compiled = _.template(this.conf.ouPath);
-      ouPath = compiled(_.assign({}, this.conf, {
-        timeInMilliseconds
-      }));
+      ouPath = compiled(this.conf);
     }
     let ouPaths;
     if (this.conf.ouPaths) {
       ouPaths = _.map(this.conf.ouPaths, (ouPath) => {
         const compiled = _.template(ouPath);
-        return compiled(_.assign({}, this.conf, {
-          timeInMilliseconds
-        }));
+        return compiled(this.conf);
       });
     }
     let mapStr = '';
@@ -86,9 +83,7 @@ class NodeTransSession extends EventEmitter {
     if (this.conf.raw) {
       Array.prototype.push.apply(argv, _.map(this.conf.raw, (item) => {
         const compiled = _.template(item);
-        return compiled(_.assign({}, this.conf, {
-          timeInMilliseconds
-        }));
+        return compiled(this.conf);
       }));
       Array.prototype.push.apply(argv, [mapStr]);
     } else {
