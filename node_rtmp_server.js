@@ -11,7 +11,7 @@ const NodeCoreUtils = require('./node_core_utils');
 
 const context = require('./node_core_ctx');
 
-const RTMP_PORT = 1935;
+const RTMP_PORT = process.env.PORT || 1935;
 
 class NodeRtmpServer {
   constructor(config) {
